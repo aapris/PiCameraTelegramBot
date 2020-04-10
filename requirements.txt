@@ -1,0 +1,3 @@
+picamera
+Pillow
+python-telegram-bot
