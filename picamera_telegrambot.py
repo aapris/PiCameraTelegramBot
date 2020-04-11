@@ -1,10 +1,12 @@
 import argparse
-import logging
-import time
-import os
 import datetime
+import logging
+import os
+import time
+from functools import wraps
 from io import BytesIO
 
+from telegram import ChatAction
 from telegram.ext import CommandHandler
 from telegram.ext import Updater
 
@@ -16,6 +18,20 @@ except ModuleNotFoundError:
     from PIL import Image, ImageDraw
 
     inpi = False
+
+
+def send_action(action):
+    """Sends `action` while processing func command."""
+
+    def decorator(func):
+        @wraps(func)
+        def command_func(update, context, *args, **kwargs):
+            context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=action)
+            return func(update, context, *args, **kwargs)
+
+        return command_func
+
+    return decorator
 
 
 def get_args():
@@ -30,6 +46,7 @@ def get_args():
     return args
 
 
+@send_action(ChatAction.UPLOAD_PHOTO)
 def photo(update, context):
     bio = BytesIO()
     bio.name = datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%SZ.jpg')
@@ -43,6 +60,7 @@ def photo(update, context):
         d = ImageDraw.Draw(im)
         d.text((10, 10), "Sample photo", fill=(255, 255, 0))
         im.save(bio, 'JPEG')
+        time.sleep(2)  # pseudo warm up delay
     bio.seek(0)
     context.bot.send_photo(chat_id=update.effective_chat.id, photo=bio)
 
